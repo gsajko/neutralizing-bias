@@ -49,20 +49,20 @@ joint_model = joint_model.JointModel(
     debias_model=debias_model, tagging_model=tagging_model)
 
 if CUDA:
-    joint_model = joint_model.cuda()
+  joint_model = joint_model.cuda()
 
 if checkpoint is not None and os.path.exists(checkpoint):
-    print('LOADING FROM ' + checkpoint)
-    # TODO(rpryzant): is there a way to do this more elegantly? 
-    # https://pytorch.org/tutorials/beginner/saving_loading_models.html#saving-loading-model-across-devices
-    if CUDA:
-        joint_model.load_state_dict(torch.load(checkpoint))
-        joint_model = joint_model.cuda()
-    else:
-        joint_model.load_state_dict(torch.load(checkpoint, map_location='cpu'))
-    print('...DONE')
+  print('LOADING FROM ' + checkpoint)
+  # TODO(rpryzant): is there a way to do this more elegantly? 
+  # https://pytorch.org/tutorials/beginner/saving_loading_models.html#saving-loading-model-across-devices
+  if CUDA:
+    joint_model.load_state_dict(torch.load(checkpoint))
+    joint_model = joint_model.cuda()
+  else:
+    joint_model.load_state_dict(torch.load(checkpoint, map_location='cpu'))
+  print('...DONE')
 
-# # # # # # # # # # # # EVAL # # # # # # # # # # # # # #
+# # # # # # # # # # # # EVAL MODE & UTIL METHODS # # # # # # # # # # # # # #
 joint_model.eval()
 
 def transform_input(url, headline):
@@ -88,4 +88,26 @@ def predict(dataloader):
   print(hits)
   print(preds)
   print(golds)
+  return preds
 
+# # # # # # # # # Server # # # # # # # # # # 
+
+app = Flask(__name__)
+
+@app.route('/', methods=['GET'])
+def root():
+  return jsonify({'msg' : 'Try POSTing to the /predict endpoint with a url and headline text'})
+
+@app.route('/predict', methods=['POST'])
+def predict():
+  if request.method == 'POST':
+    req_data = request.get_json()
+    
+    url = req_data['url']
+    headline = req_data['headline']
+
+    transform_input(url, headline)
+    dataloader = load_data()
+    prediction = predict(dataloader)
+    
+    return jsonify({'unbiased': prediction})

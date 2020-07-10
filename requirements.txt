@@ -9,3 +9,4 @@ mwparserfromhell
 python-Levenshtein
 autocorrect
 future
+flask
