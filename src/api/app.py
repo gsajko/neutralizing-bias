@@ -1,6 +1,8 @@
 import torch
 from pytorch_pretrained_bert.tokenization import BertTokenizer
 
+from random import randint
+
 import os
 import numpy as np
 
@@ -69,18 +71,43 @@ if checkpoint is not None and os.path.exists(checkpoint):
 
 # # # # # # # # # # # # EVAL MODE & UTIL METHODS # # # # # # # # # # # # # #
 joint_model.eval()
+def words_from_toks(toks):
+    words = []
+    word_indices = []
+    for i, tok in enumerate(toks):
+        if tok.startswith('##'):
+            words[-1] += tok.replace('##', '')
+            word_indices[-1].append(i)
+        else:
+            words.append(tok)
+            word_indices.append([i])
+    return words, word_indices
+
+
+def get_pos_dep(toks):
+    out_pos, out_dep = [], []
+    words, word_indices = words_from_toks(toks)
+    analysis = nlp(' '.join(words))
+    
+    if len(analysis) != len(words):
+        return None, None
+
+    for analysis_tok, idx in zip(analysis, word_indices):
+        out_pos += [analysis_tok.pos_] * len(idx)
+        out_dep += [analysis_tok.dep_] * len(idx)
+    
+    assert len(out_pos) == len(out_dep) == len(toks)
+    
+    return ' '.join(out_pos), ' '.join(out_dep)
+
 
 def transform_input(url, headline):
   tokenized = tokenizer.tokenize(headline)
-  tokens = nlp(' '.join(tokenized))
-  print(tokens, flush=True)
-  pos = map(lambda t: t.pos_, tokens)
-  deps = map(lambda t: t.dep_, tokens)
-  print(deps, flush=True)
+  pos, deps = get_pos_dep(tokenized)
   final = url + '\t' + (' '.join(tokenized) + '\t') * 2
   final += headline + '\t' + headline + '\t'
-  final += ' '.join(pos) + '\t'
-  final += ' '.join(deps)
+  final += pos + '\t'
+  final += deps
   print(final, flush=True)
   with open(test_file, 'w') as filetowrite:
     filetowrite.write(final)
@@ -89,8 +116,9 @@ def transform_input(url, headline):
 def load_data():
   eval_dataloader, num_eval_examples = get_dataloader(
     test_file,
-    tok2id, ARGS.test_batch_size, working_dir + '/test_data.pkl',
+    tok2id, ARGS.test_batch_size, working_dir + '/' + str(randint(1, 100000)) + 'test_data.pkl',
     test=True, add_del_tok=ARGS.add_del_tok)
+
   print(eval_dataloader)
   print(num_eval_examples, flush=True)
   return eval_dataloader
@@ -115,12 +143,13 @@ def root_route():
 
 @app.route('/test', methods=['GET'])
 def test_route():
-  transform_input('https://google.com/', "tokenizer tries to tell trump to back off of dhruv")
+  transform_input('https://google.com/', "Zuckerberg Never Fails to Disappoint")
   dataloader = load_data()
   prediction = predict(dataloader)
-  print(prediction, flush=True)
   
-  return jsonify({'unbiased': prediction})
+  print(prediction, flush=True)
+  words, _ = words_from_toks(prediction[0])
+  return jsonify({'unbiased': ' '.join(words) })
 
 @app.route('/predict', methods=['POST'])
 def predict_route():
