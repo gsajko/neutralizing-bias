@@ -102,3 +102,8 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# Data 
+src/bias_data/
+src/bias_data.zip
+src/model.ckpt
