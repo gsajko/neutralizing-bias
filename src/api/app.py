@@ -15,8 +15,8 @@ import seq2seq.utils as seq2seq_utils
 import tagging.model as tagging_model
 import tagging.utils as tagging_utils
 
-import model as joint_model
-import utils as joint_utils
+import joint.model as joint_model
+import joint.utils as joint_utils
 
 from flask import Flask, jsonify, request
 
@@ -42,7 +42,7 @@ tagging_model = tagging_model.BertForMultitaskWithFeaturesOnTop.from_pretrained(
             ARGS.bert_model,
             cls_num_labels=ARGS.num_categories,
             tok_num_labels=ARGS.num_tok_labels,
-            cache_dir=ARGS.working_dir + '/cache',
+            cache_dir=working_dir + '/cache',
             tok2id=tok2id)
 
 joint_model = joint_model.JointModel(
@@ -71,7 +71,7 @@ def transform_input(url, headline):
   with open(test_file, 'w') as filetowrite:
     filetowrite.write(final)
 
-transform_input('http://nytimes.com/', "tokenizer tries to tell trump to back off of dhruv")
+# transform_input('http://nytimes.com/', "tokenizer tries to tell trump to back off of dhruv")
 
 def load_data():
   eval_dataloader, num_eval_examples = get_dataloader(
@@ -111,3 +111,7 @@ def predict():
     prediction = predict(dataloader)
     
     return jsonify({'unbiased': prediction})
+
+if __name__ == '__main__':
+  app.run(debug=True,host='0.0.0.0', port=5000)
+  print("INFO: Server started")

@@ -1,4 +1,10 @@
-# Neutralizing Biased Text
+# Setup Instructions
+1. Get [Docker](docker.com)
+2. Increase Docker memory to 4GB
+3. Run docker-compose up in root directory of this repo
+
+
+# Neutralizing Biased Text Original README
 
 This repo contains code for the paper, "[Automatically Neutralizing Subjective Bias in Text](https://arxiv.org/abs/1911.09709)".
 
