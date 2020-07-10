@@ -1,7 +1,7 @@
-wget http://nlp.stanford.edu/projects/bias/bias_data.zip
-unzip bias_data.zip
+#wget http://nlp.stanford.edu/projects/bias/bias_data.zip
+#unzip bias_data.zip
 
-wget https://nlp.stanford.edu/projects/bias/model.ckpt
+#wget https://nlp.stanford.edu/projects/bias/model.ckpt
 
 python joint/inference.py \
        --extra_features_top --pre_enrich --activation_hidden \
