@@ -23,6 +23,9 @@ import joint.utils as joint_utils
 from flask import Flask, jsonify, request
 
 # # # # # # # # # # SETTINGS # # # # # # # # # # # # 
+
+nlp = spacy.load("en_core_web_sm")
+
 working_dir = 'INFERENCE'
 test_file = 'biased.test'
 checkpoint = 'model.ckpt'
@@ -69,13 +72,16 @@ joint_model.eval()
 
 def transform_input(url, headline):
   tokenized = tokenizer.tokenize(headline)
-  nlp = spacy.load("en_core_web_sm")
-  tokens = nlp(headline)
+  tokens = nlp(' '.join(tokenized))
   print(tokens, flush=True)
   pos = map(lambda t: t.pos_, tokens)
-  print(pos, flush=True)
-  final = url + ' ' + (' '.join(tokenized) + ' ') * 4
-  final += ' '.join(pos)
+  deps = map(lambda t: t.dep_, tokens)
+  print(deps, flush=True)
+  final = url + '\t' + (' '.join(tokenized) + '\t') * 2
+  final += headline + '\t' + headline + '\t'
+  final += ' '.join(pos) + '\t'
+  final += ' '.join(deps)
+  print(final, flush=True)
   with open(test_file, 'w') as filetowrite:
     filetowrite.write(final)
 
@@ -109,7 +115,7 @@ def root_route():
 
 @app.route('/test', methods=['GET'])
 def test_route():
-  transform_input('https://nytimes.com/', "tokenizer tries to tell trump to back off of dhruv")
+  transform_input('https://google.com/', "tokenizer tries to tell trump to back off of dhruv")
   dataloader = load_data()
   prediction = predict(dataloader)
   print(prediction, flush=True)
