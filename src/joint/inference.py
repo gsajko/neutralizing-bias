@@ -94,7 +94,7 @@ if ARGS.checkpoint is not None and os.path.exists(ARGS.checkpoint):
         joint_model.load_state_dict(torch.load(ARGS.checkpoint))
         joint_model = joint_model.cuda()
     else:
-        joint_model.load_state_dict(torch.load(ARGS.checkpoint, map_location='cpu'))
+        joint_model.load_state_dict(torch.load(ARGS.checkpoint, map_location=torch.device('cpu')))
     print('...DONE')
 
 

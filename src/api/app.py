@@ -59,7 +59,7 @@ if checkpoint is not None and os.path.exists(checkpoint):
     joint_model.load_state_dict(torch.load(checkpoint))
     joint_model = joint_model.cuda()
   else:
-    joint_model.load_state_dict(torch.load(checkpoint, map_location='cpu'))
+    joint_model.load_state_dict(torch.load(checkpoint, map_location=torch.device('cpu')))
   print('...DONE')
 
 # # # # # # # # # # # # EVAL MODE & UTIL METHODS # # # # # # # # # # # # # #
@@ -71,13 +71,14 @@ def transform_input(url, headline):
   with open(test_file, 'w') as filetowrite:
     filetowrite.write(final)
 
-# transform_input('http://nytimes.com/', "tokenizer tries to tell trump to back off of dhruv")
 
 def load_data():
   eval_dataloader, num_eval_examples = get_dataloader(
     test_file,
     tok2id, ARGS.test_batch_size, working_dir + '/test_data.pkl',
     test=True, add_del_tok=ARGS.add_del_tok)
+  print(eval_dataloader)
+  print(num_eval_examples, flush=True)
   return eval_dataloader
 
 def predict(dataloader):
@@ -85,9 +86,9 @@ def predict(dataloader):
     joint_model, dataloader, tok2id, inference_output,
     ARGS.max_seq_len, ARGS.beam_width)
 
-  print(hits)
-  print(preds)
-  print(golds)
+  print(hits, flush=True)
+  print(preds, flush=True)
+  print(golds, flush=True)
   return preds
 
 # # # # # # # # # Server # # # # # # # # # # 
@@ -95,11 +96,20 @@ def predict(dataloader):
 app = Flask(__name__)
 
 @app.route('/', methods=['GET'])
-def root():
+def root_route():
   return jsonify({'msg' : 'Try POSTing to the /predict endpoint with a url and headline text'})
 
+@app.route('/test', methods=['GET'])
+def test_route():
+  transform_input('https://nytimes.com/', "tokenizer tries to tell trump to back off of dhruv")
+  dataloader = load_data()
+  prediction = predict(dataloader)
+  print(prediction, flush=True)
+  
+  return jsonify({'unbiased': prediction})
+
 @app.route('/predict', methods=['POST'])
-def predict():
+def predict_route():
   if request.method == 'POST':
     req_data = request.get_json()
     
