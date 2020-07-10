@@ -10,3 +10,4 @@ python-Levenshtein
 autocorrect
 future
 flask
+spacy

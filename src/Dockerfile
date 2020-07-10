@@ -8,6 +8,7 @@ COPY ./requirements.txt /app/requirements.txt
 RUN pip install -r requirements.txt
 COPY . /app
 RUN ["python", "download_punkt.py"]
+RUN ["python", "-m", "spacy", "download", "en_core_web_sm"]
 RUN locale-gen en_US.UTF-8
 ENV LC_ALL=en_US.UTF-8
 ENV LANG=en_US.UTF-8

@@ -4,6 +4,8 @@ from pytorch_pretrained_bert.tokenization import BertTokenizer
 import os
 import numpy as np
 
+import spacy
+
 import sys; sys.path.append('.')
 from shared.data import get_dataloader
 from shared.args import ARGS
@@ -67,7 +69,13 @@ joint_model.eval()
 
 def transform_input(url, headline):
   tokenized = tokenizer.tokenize(headline)
+  nlp = spacy.load("en_core_web_sm")
+  tokens = nlp(headline)
+  print(tokens, flush=True)
+  pos = map(lambda t: t.pos_, tokens)
+  print(pos, flush=True)
   final = url + ' ' + (' '.join(tokenized) + ' ') * 4
+  final += ' '.join(pos)
   with open(test_file, 'w') as filetowrite:
     filetowrite.write(final)
 
