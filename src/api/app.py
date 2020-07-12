@@ -22,7 +22,7 @@ import tagging.utils as tagging_utils
 import joint.model as joint_model
 import joint.utils as joint_utils
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, render_template
 
 # # # # # # # # # # SETTINGS # # # # # # # # # # # # 
 
@@ -135,27 +135,20 @@ def root_route():
 
 @app.route('/test', methods=['GET'])
 def test_route():
-  transformed_input = transform_input('https://google.com/', "Zuckerberg Never Fails to Disappoint")
-  dataloader = load_data(transformed_input)
-  prediction = predict(dataloader)
-  
-  print(prediction, flush=True)
-  words, _ = words_from_toks(prediction[0])
-  return jsonify({'unbiased': ' '.join(words) })
+  return render_template('public/test.html')
 
 @app.route('/predict', methods=['POST'])
 def predict_route():
-  if request.method == 'POST':
-    req_data = request.get_json()
-    
-    url = req_data['url']
-    headline = req_data['headline']
+  req_data = request.get_json()
+  
+  url = req_data['url']
+  headline = req_data['headline']
+  transformed_input = transform_input(url, headline)
+  dataloader = load_data(transformed_input)
+  prediction = predict(dataloader)
 
-    transform_input(url, headline)
-    dataloader = load_data()
-    prediction = predict(dataloader)
-    
-    return jsonify({'unbiased': prediction})
+  words, _ = words_from_toks(prediction[0])
+  return jsonify({'unbiased': ' '.join(words) })
 
 if __name__ == '__main__':
   app.run(debug=True,host='0.0.0.0', port=5000)

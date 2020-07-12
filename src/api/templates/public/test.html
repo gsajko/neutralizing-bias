@@ -1,0 +1,49 @@
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Test Prediction</title>
+  <script>
+  const submit = async () => {
+		const data = {};
+		data['url'] = document.querySelector('#url').value;
+		data['headline'] = document.querySelector('#headline').value;
+		console.log(data);
+    const response = await fetch('/predict', {
+			method: 'POST',
+			mode: 'same-origin',
+			cache: 'no-cache',
+			credentials: 'same-origin',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify(data)
+		});
+		const responsePayload = await response.json();
+		document.querySelector('#result').innerHTML = responsePayload.unbiased;
+  };
+  </script>
+</head>
+
+<body>
+  <h1 style="color: blue">Test</h1>
+  <div>
+    <p>URL:</p>
+    <input id="url" name="url" label="url" type="text" />
+  </div>
+  <div>
+    <p>Headline:</p>
+    <input id="headline" name="headline" label="headline" type="text" />
+  </div>
+  <div>
+    <button onclick="submit()">Submit</button>
+  </div>
+  <div>
+    <p>Result:</p>
+    <div id="result"></div>
+  </div>
+</body>
+
+</html>
