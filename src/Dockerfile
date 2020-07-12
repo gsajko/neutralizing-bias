@@ -14,4 +14,5 @@ ENV LC_ALL=en_US.UTF-8
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US.UTF-8
 RUN ./download_data_ckpt_and_run_inference.sh
+RUN ["python", "cache_bert_model.py"]
 CMD ["python", "api/app.py", "--extra_features_top", "--pre_enrich", "--activation_hidden", "--test_batch_size", "1", "--bert_full_embeddings", "--debias_weight", "1.3", "--token_softmax", "--pointer_generator", "--coverage", "--working_dir", "INFERENCE", "--test", "bias_data/WNC/biased.word.test", "--checkpoint", "model.ckpt", "--inference_output", "INFERENCE/output.txt"]

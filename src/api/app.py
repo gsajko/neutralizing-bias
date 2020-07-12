@@ -9,7 +9,7 @@ import numpy as np
 import spacy
 
 import sys; sys.path.append('.')
-from shared.data import get_dataloader
+from shared.data import get_dataloader_from_str
 from shared.args import ARGS
 from shared.constants import CUDA
 
@@ -28,13 +28,10 @@ from flask import Flask, jsonify, request
 
 nlp = spacy.load("en_core_web_sm")
 
-working_dir = 'INFERENCE'
-test_file = 'biased.test'
 checkpoint = 'model.ckpt'
-inference_output = 'INFERENCE/output.txt'
 
 # # # # # # # # ## # # # ## # # DATA # # # # # # # # ## # # # ## # #
-tokenizer = BertTokenizer.from_pretrained(ARGS.bert_model, cache_dir= working_dir +'/cache')
+tokenizer = BertTokenizer.from_pretrained(ARGS.bert_model)
 tok2id = tokenizer.vocab
 tok2id['<del>'] = len(tok2id)
 
@@ -49,7 +46,6 @@ tagging_model = tagging_model.BertForMultitaskWithFeaturesOnTop.from_pretrained(
             ARGS.bert_model,
             cls_num_labels=ARGS.num_categories,
             tok_num_labels=ARGS.num_tok_labels,
-            cache_dir=working_dir + '/cache',
             tok2id=tok2id)
 
 joint_model = joint_model.JointModel(
@@ -108,16 +104,12 @@ def transform_input(url, headline):
   final += headline + '\t' + headline + '\t'
   final += pos + '\t'
   final += deps
-  print(final, flush=True)
-  with open(test_file, 'w') as filetowrite:
-    filetowrite.write(final)
+  return final
 
-
-def load_data():
-  eval_dataloader, num_eval_examples = get_dataloader(
-    test_file,
-    tok2id, ARGS.test_batch_size, working_dir + '/' + str(randint(1, 100000)) + 'test_data.pkl',
-    test=True, add_del_tok=ARGS.add_del_tok)
+def load_data(transformed_input):
+  eval_dataloader, num_eval_examples = get_dataloader_from_str(
+    transformed_input,
+    tok2id, ARGS.test_batch_size)
 
   print(eval_dataloader)
   print(num_eval_examples, flush=True)
@@ -125,7 +117,7 @@ def load_data():
 
 def predict(dataloader):
   hits, preds, golds, srcs = joint_utils.run_eval(
-    joint_model, dataloader, tok2id, inference_output,
+    joint_model, dataloader, tok2id, None,
     ARGS.max_seq_len, ARGS.beam_width)
 
   print(hits, flush=True)
@@ -143,8 +135,8 @@ def root_route():
 
 @app.route('/test', methods=['GET'])
 def test_route():
-  transform_input('https://google.com/', "Zuckerberg Never Fails to Disappoint")
-  dataloader = load_data()
+  transformed_input = transform_input('https://google.com/', "Zuckerberg Never Fails to Disappoint")
+  dataloader = load_data(transformed_input)
   prediction = predict(dataloader)
   
   print(prediction, flush=True)

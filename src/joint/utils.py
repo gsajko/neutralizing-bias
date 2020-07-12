@@ -55,7 +55,11 @@ def train_for_epoch(model, dataloader, optimizer, debias_loss_fn, tagging_loss_f
 def run_eval(model, dataloader, tok2id, out_file_path, max_seq_len, beam_width=1):
     id2tok = {x: tok for (tok, x) in tok2id.items()}
 
-    out_file = open(out_file_path, 'w')
+    should_output = out_file_path is not None
+    if should_output:
+        out_file = open(out_file_path, 'w')
+    else:
+        out_file = None
 
     losses = []
     hits = []
@@ -93,7 +97,8 @@ def run_eval(model, dataloader, tok2id, out_file_path, max_seq_len, beam_width=1
         preds += new_preds
         golds += new_golds
         srcs += new_srcs
-    out_file.close()
+    if should_output:
+        out_file.close()
 
     return hits, preds, golds, srcs
 

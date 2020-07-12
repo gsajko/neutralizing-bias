@@ -31,7 +31,7 @@ if not os.path.exists(ARGS.working_dir):
 
 
 print('LOADING DATA...')
-tokenizer = BertTokenizer.from_pretrained(ARGS.bert_model, cache_dir=ARGS.working_dir + '/cache')
+tokenizer = BertTokenizer.from_pretrained(ARGS.bert_model)
 tok2id = tokenizer.vocab
 tok2id['<del>'] = len(tok2id)
 

@@ -98,14 +98,20 @@ def noise_seq(seq, drop_prob=0.25, shuf_dist=3, drop_set=None, keep_bigrams=Fals
     
     return dropped_seq
 
+def get_examples(data_path, tok2id, 
+                 noise, add_del_tok,
+                 categories_path):
+    return get_examples_from_enumerable(enumerate(tqdm(open(data_path), tok2id, noise, add_del_tok, categories_path)))
 
-def get_examples(data_path, tok2id, max_seq_len, 
+def get_examples_from_enumerable(enumerable, tok2id, 
                  noise=False, add_del_tok=False,
                  categories_path=None):
     global REL2ID
     global POS2ID
     global EDIT_TYPE2ID
     global ARGS
+
+    max_seq_len = ARGS.max_seq_len
 
     if ARGS.drop_words is not None:
         drop_set = set([l.strip() for l in open(ARGS.drop_words)])
@@ -124,7 +130,7 @@ def get_examples(data_path, tok2id, max_seq_len,
             l.strip().split(',')[0]: [float(x) for x in l.strip().split(',')[1:]]
             for l in category_fp
         }
-    for i, (line) in enumerate(tqdm(open(data_path))):
+    for i, (line) in enumerable:
         parts = line.strip().split('\t')
 
         # if there pos/rel info
@@ -223,48 +229,32 @@ def get_examples(data_path, tok2id, max_seq_len,
     return out
 
 
+def collate(data, sort_batch=True):
+    if sort_batch:
+        # sort by length for packing/padding
+        data.sort(key=lambda x: x[2], reverse=True)
+    # group by datatype
+    [
+        src_id, src_mask, src_len, 
+        post_in_id, post_out_id, 
+        pre_tok_label, post_tok_label,
+        rel_ids, pos_ids, categories
+    ] = [torch.stack(x) for x in zip(*data)]
 
-def get_dataloader(data_path, tok2id, batch_size, 
-                   pickle_path=None, test=False, noise=False, add_del_tok=False, 
-                   categories_path=None, sort_batch=True):
-    global ARGS
+    # cut off at max len of this batch for unpacking/repadding
+    max_len = max(src_len)
+    data = [
+        src_id[:, :max_len], src_mask[:, :max_len], src_len, 
+        post_in_id[:, :max_len+10], post_out_id[:, :max_len+10],    # +10 for wiggle room
+        pre_tok_label[:, :max_len], post_tok_label[:, :max_len+10], # +10 for post_toks_labels too (it's just gonna be matched up with post ids)
+        rel_ids[:, :max_len], pos_ids[:, :max_len], categories
+    ]
 
-    def collate(data):
-        if sort_batch:
-            # sort by length for packing/padding
-            data.sort(key=lambda x: x[2], reverse=True)
-        # group by datatype
-        [
-            src_id, src_mask, src_len, 
-            post_in_id, post_out_id, 
-            pre_tok_label, post_tok_label,
-            rel_ids, pos_ids, categories
-        ] = [torch.stack(x) for x in zip(*data)]
+    return data
 
-        # cut off at max len of this batch for unpacking/repadding
-        max_len = max(src_len)
-        data = [
-            src_id[:, :max_len], src_mask[:, :max_len], src_len, 
-            post_in_id[:, :max_len+10], post_out_id[:, :max_len+10],    # +10 for wiggle room
-            pre_tok_label[:, :max_len], post_tok_label[:, :max_len+10], # +10 for post_toks_labels too (it's just gonna be matched up with post ids)
-            rel_ids[:, :max_len], pos_ids[:, :max_len], categories
-        ]
 
-        return data
 
-    if pickle_path is not None and os.path.exists(pickle_path):
-        examples = pickle.load(open(pickle_path, 'rb'))
-    else:
-        examples = get_examples(
-            data_path=data_path, 
-            tok2id=tok2id,
-            max_seq_len=ARGS.max_seq_len,
-            noise=noise,
-            add_del_tok=add_del_tok,
-            categories_path=categories_path)
-
-        pickle.dump(examples, open(pickle_path, 'wb'))
-
+def get_dataloader_from_examples(examples, batch_size, test):
     data = TensorDataset(
         torch.tensor(examples['pre_ids'], dtype=torch.long),
         torch.tensor(examples['pre_masks'], dtype=torch.uint8), # byte for masked_fill()
@@ -283,6 +273,28 @@ def get_dataloader(data_path, tok2id, batch_size,
         collate_fn=collate,
         batch_size=batch_size)
 
+    return dataloader
+
+def get_dataloader(data_path, tok2id, batch_size, 
+                   pickle_path=None, test=False, noise=False, add_del_tok=False, 
+                   categories_path=None):
+
+    if pickle_path is not None and os.path.exists(pickle_path):
+        examples = pickle.load(open(pickle_path, 'rb'))
+    else:
+        examples = get_examples(
+            data_path=data_path, 
+            tok2id=tok2id,
+            noise=noise,
+            add_del_tok=add_del_tok,
+            categories_path=categories_path)
+
+        pickle.dump(examples, open(pickle_path, 'wb'))
+    dataloader = get_dataloader_from_examples(examples, batch_size, test)
     return dataloader, len(examples['pre_ids'])
 
 
+def get_dataloader_from_str(inp, tok2id, batch_size, test=False):
+    examples = get_examples_from_enumerable(enumerate([inp]), tok2id)
+    dataloader = get_dataloader_from_examples(examples, batch_size, test)
+    return dataloader, len(examples['pre_ids'])
